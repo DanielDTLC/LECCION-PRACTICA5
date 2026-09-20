@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "../config";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -6,20 +7,40 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
-    // Simulación de validación hardcodeada (a futuro se reemplazará por llamada a API)
-    if (email === "admin@upse.edu.ec" && password === "123456") {
-      setError("");
-      login(email); // Cambiamos el estado global a autenticado
+    try {
+      const response = await fetch(`${API_URL}/api/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Credenciales incorrectas");
+        setLoading(false);
+        return;
+      }
+
+      // Guardamos el token que envía el backend de Go
+      login(email, data.token);
       navigate("/"); // Redirigimos al Dashboard
-    } else {
-      setError("Credenciales incorrectas. Usa admin@upse.edu.ec / 123456");
+    } catch (err) {
+      console.error("Error de conexión:", err);
+      setError("No se pudo conectar con el servidor");
+      setLoading(false);
     }
   };
 
@@ -68,9 +89,10 @@ const Login = () => {
           </div>
           <button
             type="submit"
-            className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition"
+            disabled={loading}
+            className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Iniciar Sesión
+            {loading ? "Ingresando..." : "Iniciar Sesión"}
           </button>
         </form>
       </div>
