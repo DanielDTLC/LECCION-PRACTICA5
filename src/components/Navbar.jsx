@@ -1,53 +1,46 @@
-import { useEffect, useRef, useState } from "react";
+// src/components/Navbar.jsx
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, X, ShoppingCart } from "lucide-react";
+import { ShoppingCart, Menu } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 
-const Navbar = ({ onToggleSidebar, isSidebarOpen }) => {
+const Navbar = ({ onToggleSidebar }) => {
   const { totalItems } = useCart();
-  const { logout, userEmail } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
-
-  // El menú por hover no funciona en pantallas táctiles: lo pasamos a click.
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  useEffect(() => {
-    const onClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, []);
-
   const handleLogout = () => {
-    setMenuOpen(false);
     logout();
     navigate("/login");
   };
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <header className="h-16 shrink-0 bg-white border-b border-slate-200 flex items-center justify-between gap-2 px-3 sm:px-6 lg:px-8">
-      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0">
+      <div className="flex items-center gap-2 md:gap-4 min-w-0">
         <button
           onClick={onToggleSidebar}
-          className="p-2 rounded-full hover:bg-slate-100 transition text-slate-600 shrink-0"
-          aria-label="Colapsar o expandir menú"
-          aria-expanded={isSidebarOpen}
+          className="p-2 rounded-md hover:bg-slate-100 transition text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          aria-label="Alternar menú"
         >
-          {/* En móvil el icono refleja abierto/cerrado; en escritorio siempre hamburguesa */}
-          <span className="md:hidden">
-            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </span>
-          <span className="hidden md:block">
-            <Menu size={20} />
-          </span>
+          <Menu size={22} />
         </button>
-        <h2 className="hidden sm:block text-slate-600 font-medium text-base lg:text-lg truncate">
-          Panel de Administración
+        <h2 className="text-slate-600 font-medium text-base lg:text-lg truncate hidden sm:block">
+          {user?.rol === "admin"
+            ? "Panel de Administración"
+            : "Tienda MultiCatálogo"}
         </h2>
       </div>
 
@@ -65,9 +58,18 @@ const Navbar = ({ onToggleSidebar, isSidebarOpen }) => {
           )}
         </Link>
 
-        {/* El correo se oculta en móvil para no romper la barra */}
         <span className="hidden md:block text-sm text-slate-500 max-w-[180px] lg:max-w-xs truncate">
-          {userEmail}
+          {user?.email}
+        </span>
+
+        <span
+          className={`hidden md:inline-block text-xs font-semibold px-2 py-1 rounded-full uppercase ${
+            user?.rol === "admin"
+              ? "bg-amber-100 text-amber-700"
+              : "bg-indigo-100 text-indigo-700"
+          }`}
+        >
+          {user?.rol}
         </span>
 
         <div className="relative" ref={menuRef}>
@@ -90,10 +92,12 @@ const Navbar = ({ onToggleSidebar, isSidebarOpen }) => {
               role="menu"
               className="absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-1.5rem)] bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden"
             >
-              {/* En móvil mostramos aquí el correo que ocultamos arriba */}
               <div className="md:hidden px-4 py-3 border-b border-slate-100">
                 <p className="text-xs text-slate-400">Sesión iniciada como</p>
-                <p className="text-sm text-slate-700 truncate">{userEmail}</p>
+                <p className="text-sm text-slate-700 truncate">{user?.email}</p>
+                <p className="text-xs uppercase font-semibold text-indigo-600 mt-1">
+                  {user?.rol}
+                </p>
               </div>
               <button
                 onClick={handleLogout}

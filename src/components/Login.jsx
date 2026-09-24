@@ -1,7 +1,8 @@
+// src/components/Login.jsx
 import { useState } from "react";
-import { API_URL } from "../config";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { API_URL } from "../config";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -12,43 +13,41 @@ const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
 
-    try {
-      const response = await fetch(`${API_URL}/api/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+    fetch(`${API_URL}/api/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("Credenciales incorrectas");
+        return response.json();
+      })
+      .then((data) => {
+        setError("");
+        // La API devuelve el rol (admin | cliente) junto al correo
+        const rol = data.rol === "admin" ? "admin" : "cliente";
+        login({ email: data.email, rol });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || "Credenciales incorrectas");
+        // Redirigimos según el rol: admin al Dashboard, cliente a la Tienda
+        navigate(rol === "admin" ? "/" : "/tienda");
+      })
+      .catch((err) => {
+        setError(err.message);
+      })
+      .finally(() => {
         setLoading(false);
-        return;
-      }
-
-      // Guardamos el token que envía el backend de Go
-      login(email, data.token);
-      navigate("/"); // Redirigimos al Dashboard
-    } catch (err) {
-      console.error("Error de conexión:", err);
-      setError("No se pudo conectar con el servidor");
-      setLoading(false);
-    }
+      });
   };
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-slate-100 px-4 py-8">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-md p-6 sm:p-8 border border-slate-200">
-        <div className="text-center mb-6 sm:mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">MultiCatálogo</h2>
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-md p-8 border border-slate-200">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-slate-900">MultiCatálogo</h2>
           <p className="text-slate-500 mt-2">
             Ingresa a tu cuenta para continuar
           </p>
@@ -74,6 +73,7 @@ const Login = () => {
               required
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Contraseña
@@ -87,14 +87,27 @@ const Login = () => {
               required
             />
           </div>
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Ingresando..." : "Iniciar Sesión"}
+            {loading ? "Validando..." : "Iniciar Sesión"}
           </button>
         </form>
+
+        <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1">
+          <p className="font-semibold text-slate-700">Cuentas de prueba:</p>
+          <p>
+            👑 Admin:{" "}
+            <span className="font-mono">admin@upse.edu.ec / 123456</span>
+          </p>
+          <p>
+            🛍️ Cliente:{" "}
+            <span className="font-mono">cliente@upse.edu.ec / 123456</span>
+          </p>
+        </div>
       </div>
     </div>
   );
